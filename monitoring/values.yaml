@@ -18,7 +18,7 @@ server:
   # Both are needed. The toleration gets these pods PAST worker2's taint; the
   # nodeSelector is what puts them there.
   nodeSelector:
-    kubernetes.io/hostname: worker2
+    kubernetes.io/hostname: g4-k8s-worker2
   tolerations:
     - key: dedicated
       operator: Equal
@@ -65,7 +65,7 @@ prometheus-node-exporter:
 kube-state-metrics:
   enabled: true
   nodeSelector:
-    kubernetes.io/hostname: worker2
+    kubernetes.io/hostname: g4-k8s-worker2
   tolerations:
     - key: dedicated
       operator: Equal
@@ -120,3 +120,19 @@ extraScrapeConfigs: |
       - source_labels: [__meta_kubernetes_pod_container_port_name]
         action: keep
         regex: metrics
+  - job_name: epimetheus
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        # A bare word is already a string, so no quotes needed.
+        regex: epimetheus
+      - source_labels: [__meta_kubernetes_pod_container_port_number]
+        action: keep
+        # Quoted, or YAML reads it as a number and the config will not load.
+        regex: "8080"
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace

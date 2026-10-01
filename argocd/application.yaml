@@ -19,7 +19,7 @@ spec:
 
   source:
     # REPLACE_ME — e.g. https://github.com/<you>/<your-repo>.git
-    repoURL: REPLACE_ME_WITH_YOUR_REPO_URL
+    repoURL: https://github.com/worapx/IPA-Week10-Cluster.git
     targetRevision: HEAD
     # Only this directory is deployed. catalog/, argocd/ and pandora/ are run
     # by hand, and Argo CD ignores them.
@@ -28,7 +28,7 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     # REPLACE_ME — the namespace you created for your deployment.
-    namespace: REPLACE_ME_WITH_YOUR_NAMESPACE
+    namespace: lab10
 
   syncPolicy:
     automated:
