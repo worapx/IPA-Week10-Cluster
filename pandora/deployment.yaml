@@ -1,0 +1,118 @@
+# The load generator.
+#
+# ONE LINE IS YOURS TO CHANGE: the team name, marked below.
+#
+#   sed -i 's/REPLACE_WITH_ROSTER_NAME/YourTeamName/' pandora/deployment.yaml
+#   kubectl apply -f pandora/
+#
+# Your team name is on the sign-up sheet, in your row. Spelling and
+# capitalisation both matter — the panel warns you before a run if the name is
+# not one it recognises, because reports filed under a misspelling cannot be
+# grouped with the rest of yours.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pandora
+  namespace: pandora
+  labels:
+    app.kubernetes.io/name: pandora
+    app.kubernetes.io/part-of: epimetheus-lab
+spec:
+  # One: two would write reports into the same directory with no way to tell
+  # which produced what.
+  replicas: 1
+  strategy:
+    # The volume attaches to one pod at a time, so the old pod must go before
+    # the new one starts. A rolling update would wait forever.
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pandora
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pandora
+    spec:
+      # On worker2 with the infrastructure, so generating the load does not
+      # compete with what is being measured. Both lines are needed: the
+      # toleration gets this pod past the taint, the nodeSelector puts it there.
+      nodeSelector:
+        kubernetes.io/hostname: worker2
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: infra
+          effect: NoSchedule
+      securityContext:
+        runAsNonRoot: true
+        # Must be numeric. The image's USER is the name `nonroot`, which
+        # kubelet cannot verify against runAsNonRoot — without these two lines
+        # the pod stops at CreateContainerConfigError and never starts.
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: pandora
+          # Pinned on purpose: :latest could change under a restart and make
+          # runs from before and after incomparable.
+          image: "cruzsri/pandora:v1"
+          args:
+            - "--serve"
+
+            # ---- THE ONE LINE YOU EDIT --------------------------------------
+            - "--team"
+            - "REPLACE_WITH_ROSTER_NAME"
+            # -----------------------------------------------------------------
+
+            # The ingress controller's in-cluster address, asking for the host
+            # your Ingress matches on — so the load takes the same route through
+            # your cluster as any other request.
+            - "--target-url"
+            - "http://ingress-nginx-controller.ingress-nginx.svc/pack"
+            - "--host"
+            - "ipa.local"
+
+            # Read before and after each run, and by the pre-run checks. Some
+            # values in a report are properties of your deployment that the
+            # traffic itself cannot see.
+            - "--prometheus-url"
+            - "http://prometheus.monitoring:9090"
+
+            # Must match how often your Prometheus scrapes: it sets the
+            # resolution of the values computed over sampled windows.
+            - "--scrape-interval"
+            - "5s"
+
+            - "--out"
+            - "/runs"
+          ports:
+            - name: http
+              containerPort: 9900
+          volumeMounts:
+            - name: runs
+              mountPath: /runs
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              memory: "512Mi"
+          # **Deliberately no CPU limit.** A throttled load generator would make
+          # your results measurements of it rather than of your deployment, and
+          # nothing in the numbers would say so.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            # It loads its order catalog at start-up.
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: runs
+          persistentVolumeClaim:
+            claimName: pandora-runs

@@ -1,0 +1,22 @@
+# The load generator's control panel and its own /metrics, on NodePort 30900.
+#
+# Setup adds an HAProxy frontend forwarding http://ipa.local:9900 here, which is
+# the address you normally use. Go direct to <a worker's IP>:30900 only when
+# debugging HAProxy itself.
+apiVersion: v1
+kind: Service
+metadata:
+  name: pandora
+  namespace: pandora
+  labels:
+    app.kubernetes.io/name: pandora
+    app.kubernetes.io/part-of: epimetheus-lab
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: pandora
+  ports:
+    - name: http
+      port: 9900
+      targetPort: 9900
+      nodePort: 30900

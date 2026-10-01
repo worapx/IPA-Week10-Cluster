@@ -1,0 +1,58 @@
+# The Catalog database. Run this ON THE RANCHER VM, before deploying Epimetheus.
+#
+#   docker compose -f catalog/docker-compose.yml up -d
+#
+# The image already contains the data, so there is nothing to download or
+# import. The first start takes a few minutes to load it: `docker compose ps`
+# shows `health: starting` until it is done, and `healthy` once the data is
+# really there. **Wait for `healthy`** — pods started against a half-loaded
+# database fail in ways that look like application bugs.
+#
+#   docker compose -f catalog/docker-compose.yml ps
+#   docker compose -f catalog/docker-compose.yml logs -f catalog
+
+services:
+  catalog:
+    image: "cruzsri/catalog-db:v1"
+    container_name: epimetheus-catalog
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_PASSWORD: pithos
+      POSTGRES_DB: catalog
+
+    command:
+      - postgres
+      # Total connections across every pod you run, minus a few Postgres holds
+      # back for administrators. A property of the environment, not a setting
+      # you tune — it is the same for every pair. Leave it alone.
+      - "-c"
+      - "max_connections=${CATALOG_MAX_CONNECTIONS:-12}"
+
+    ports:
+      # Your pods reach this at your rancher VM's address on 5432. That address
+      # goes into the DB_URL Secret you create when deploying.
+      - "${CATALOG_HOST_PORT:-5432}:5432"
+
+    volumes:
+      - catalog-data:/var/lib/postgresql/data
+
+    healthcheck:
+      # Checks that the data actually loaded, not merely that Postgres is
+      # accepting connections.
+      test:
+        - "CMD-SHELL"
+        - "psql -U postgres -d catalog -tAc 'SELECT count(*) = 200000 FROM orders' | grep -q '^t$$'"
+      start_period: 300s
+      interval: 10s
+      timeout: 10s
+      retries: 6
+
+volumes:
+  catalog-data:
+
+# To start the database over: remove the volume. The data only loads into an
+# empty one, so recreating the container alone will not reload it.
+#
+#   docker compose -f catalog/docker-compose.yml down -v
+#   docker compose -f catalog/docker-compose.yml up -d

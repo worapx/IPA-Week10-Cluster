@@ -1,0 +1,19 @@
+# Run reports are kept here. Without this volume, restarting the pod erases your
+# run history.
+#
+# If this ever shows Pending rather than Bound, the load generator will never
+# start — check that `kubectl get storageclass` lists `local-path`.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pandora-runs
+  namespace: pandora
+spec:
+  # Named, not left to the default, so a cluster whose default has been changed
+  # does not quietly bind something else.
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
