@@ -37,7 +37,7 @@ spec:
       # compete with what is being measured. Both lines are needed: the
       # toleration gets this pod past the taint, the nodeSelector puts it there.
       nodeSelector:
-        kubernetes.io/hostname: g4-k8s-worker2
+        kubernetes.io/hostname: k8s-worker2
       tolerations:
         - key: dedicated
           operator: Equal

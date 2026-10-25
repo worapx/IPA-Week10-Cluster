@@ -18,7 +18,7 @@ server:
   # Both are needed. The toleration gets these pods PAST worker2's taint; the
   # nodeSelector is what puts them there.
   nodeSelector:
-    kubernetes.io/hostname: g4-k8s-worker2
+    kubernetes.io/hostname: k8s-worker2
   tolerations:
     - key: dedicated
       operator: Equal
@@ -65,7 +65,7 @@ prometheus-node-exporter:
 kube-state-metrics:
   enabled: true
   nodeSelector:
-    kubernetes.io/hostname: g4-k8s-worker2
+    kubernetes.io/hostname: k8s-worker2
   tolerations:
     - key: dedicated
       operator: Equal
